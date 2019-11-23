@@ -1,0 +1,62 @@
+/* CSS Document */
+@charset "utf-8";
+*{ margin:0; padding:0; list-style:none;}
+	input[type="button"], 
+	input[type="submit"], 
+	input[type="reset"] 
+	{
+	-webkit-appearance: none;}
+a{ text-decoration:none;} 
+body{
+	width:100%;
+	max-width:640px;
+	margin:0 auto;
+	background:#eeeeee;
+	top:0px; bottom:0px; left:0px; right:0px;
+	min-width:320px;}	
+.banner{}
+.banner img{
+	width:100%;
+	max-width:640px;
+	margin:0 auto;
+		}
+.main{
+	margin-top:0%;
+	width:100%;
+	max-width:640px;
+	text-align: center;}
+.main ul{
+	}
+.main ul li{
+	float:left;
+	width:19.6%;
+	max-width:230px;
+	margin:0 auto;
+	padding:4% 0;
+	/*margin-top:5%;
+	margin-left:8%;*/
+ }
+ .border{border-bottom:1px solid #d2d2d2;
+	border-right:1px solid #d2d2d2;}
+.border_bottom{
+	border-bottom:1px solid #d2d2d2;}
+.border_right{
+	border-right:1px solid #d2d2d2;
+	}
+ .main ul li img{
+	 width:70%;}
+.main ul li p{
+	text-align:center;
+	color:#5b595a;}
+.main ul li p span{
+	 clear:both; display:block; padding:0px 10px; line-height:30px; font-size:16px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:center}
+
+.foot{
+	color:#838383;
+	line-height:130px;
+	/*margin-top:95%;*/
+	/*width:100%;
+	margin:0 auto;*/
+	text-align:center;
+}
+<!--首页结束----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------结束end-->
