@@ -9,7 +9,6 @@ import json
 
 encoding = 'utf-8'
 
-
 def get_data():
     try:
         return json.load(open('sign_in_data.json'))
@@ -24,7 +23,9 @@ def save_data(sign_in_data):
         logger.debug('save failed')
 
 
-def update_data(user, sign_in_date, sign_in_data, first_sign_in_today):
+def update_data(user, sign_in_date, sign_in_data):
+    global first_sign_in_today
+    
     if user not in sign_in_data:
         sign_in_data[user] = {'days': 0, 'last_sign_in_date': None, 'coins': 0}
 
@@ -76,16 +77,16 @@ class qiandao(Plugin):
         if self.sign_in_data and self.sign_in_data.get(user, {}).get('last_sign_in_date') != today:
             self.first_sign_in_today = False
 
-        if content == '签到':
+         if content == '签到':
             reply = Reply()
             reply.type = ReplyType.TEXT
             try:
                 if self.sign_in_data.get(user, {}).get('last_sign_in_date') == today:
                     reply.content = f'{user}，你今天已经签到过了，不能再签到了哦！'
                 else:
-                    reply.content = update_data(user, today, self.sign_in_data, self.first_sign_in_today)
+                    reply.content = update_data(user, today, self.sign_in_data)
             except:
-                reply.content = update_data(user, today, self.sign_in_data, self.first_sign_in_today)
+                reply.content = update_data(user, today, self.sign_in_data)
             e_context['reply'] = reply
             e_context.action = EventAction.BREAK_PASS
 
