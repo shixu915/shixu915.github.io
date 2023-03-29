@@ -1,5 +1,3 @@
-# encoding:utf-8
-
 from bridge.context import ContextType
 from bridge.reply import Reply, ReplyType
 import plugins
@@ -9,65 +7,38 @@ import random
 import datetime
 import json
 
-encoding='utf-8'
 def get_data():
     try:
-        return json.load(open('sign_in_data.json'))
-    except:
+        with open('sign_in_data.json') as file:
+            return json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
         return {}
-
-# 存储签到数据的字典
-sign_in_data = get_data()
-# 记录当天首签的标志
-first_sign_in_today = False
 
 def save_data(sign_in_data):
     try:
-        json.dump(sign_in_data, open('sign_in_data.json','w'))
-    except:
-        logger.debug('save failed')
+        with open('sign_in_data.json', 'w') as file:
+            json.dump(sign_in_data, file)
+    except Exception as e:
+        logger.debug('save failed: %s' % str(e))
 
-def update_data(user, sign_in_date):
-    global first_sign_in_today
-    if user not in sign_in_data:
-        sign_in_data[user] = {'days': 0, 'last_sign_in_date': None, 'coins': 0}
-
-    # 更新连续签到天数
-    if sign_in_data[user]['last_sign_in_date'] == sign_in_date - datetime.timedelta(days=1):
-        sign_in_data[user]['days'] += 1
-    else:
-        sign_in_data[user]['days'] = 1
-
-    # 更新最后签到日期
-    sign_in_data[user]['last_sign_in_date'] = sign_in_date
-
-    # 奖励金币
-    coins = random.randint(20, 80)
-    if not first_sign_in_today:
-        first_sign_in_today = True
-        coins += 80  # 首签奖励
-        sign_in_data[user]['coins'] += coins
-        save_data(sign_in_data)
-        return f'恭喜你抢到了本群首签！额外奖励80金币。你已经连续签到 {sign_in_data[user]["days"]} 天，本次签到奖励 {coins} 金币。'
-    else:
-        sign_in_data[user]['coins'] += coins
-        save_data(sign_in_data)
-        return f'你已经连续签到 {sign_in_data[user]["days"]} 天，本次签到奖励 {coins} 金币。'
-
-
-@plugins.register(name="签到", desc="这是一个签到类插件", version="0.1", author="lanvent", desire_priority= 10)
-class qiandao(Plugin):
+@plugins.register(name="签到", desc="这是一个签到类插件", version="0.1", author="晨旭", desire_priority=10)
+class SignIn(Plugin):
     def __init__(self):
         super().__init__()
         self.handlers[Event.ON_HANDLE_CONTEXT] = self.on_handle_context
-        logger.info("[Hello] inited")
+        self.sign_in_data = get_data()
+        logger.info("[SignIn] inited")
+class SignIn(Plugin):
+    def __init__(self):
+        super().__init__()
+        self.handlers[Event.ON_HANDLE_CONTEXT] = self.on_handle_context
+        self.sign_in_data = get_data()
+        logger.info("[SignIn] inited")
 
     def on_handle_context(self, e_context: EventContext):
-
         if e_context['context'].type != ContextType.TEXT:
             return
-        
-        global first_sign_in_today
+
         content = e_context['context'].content
         msg = e_context['context']['msg']
 
@@ -76,41 +47,70 @@ class qiandao(Plugin):
         else:
             user = msg['User'].get('NickName', "My friend")
 
-        # 判断是否为新的一天，重置首签标志
-        today = datetime.date.today()
-        if sign_in_data and sign_in_data[next(iter(sign_in_data))]['last_sign_in_date'] != today:
-            first_sign_in_today = False
-
         if content == '签到':
             reply = Reply()
             reply.type = ReplyType.TEXT
-            # reply.content = "Hi"
             try:
-                if sign_in_data[user]['last_sign_in_date'] == today:
+                today = datetime.date.today()
+                last_sign_in_date = self.sign_in_data.get(user, {}).get('last_sign_in_date')
+
+                if last_sign_in_date and datetime.date.fromisoformat(last_sign_in_date) == today:
                     reply.content = f'{user}，你今天已经签到过了，不能再签到了哦！'
                 else:
-                    reply.content = update_data(user, today)
-            except:
-                reply.content = update_data(user, today)
-            # itchat.send(reply, msg['FromUserName'])
+                    reply.content = self.update_data(user, today)
+            except Exception as e:
+                logger.error(f"签到异常: {str(e)}")
+                reply.content = f"{user}，签到失败，请稍后再试。"
+                
             e_context['reply'] = reply
-            e_context.action = EventAction.BREAK_PASS  # 事件结束，进入默认处理逻辑，一般会覆写reply
+            e_context.action = EventAction.BREAK_PASS
 
-        if content == '查看金币':
+        if content == '查看金币余额':
             reply = Reply()
             reply.type = ReplyType.TEXT
-            # reply.content = "Hi"
             try:
-                reply.content = f"{user}，你已经连续签到{sign_in_data[user]['days']}天了，目前一共有{sign_in_data[user]['coins']}金币，呐，给你！"
-            except:
-                reply.content = f"{user}，查询金币失败！"
-            # itchat.send(reply, msg['FromUserName'])
-            e_context['reply'] = reply
-            e_context.action = EventAction.BREAK_PASS  # 事件结束，进入默认处理逻辑，一般会覆写reply
-            
-        logger.debug("[QD] on_handle_context. content: %s" % content)
+                days = self.sign_in_data.get(user, {}).get('days', 0)
+                coins = self.sign_in_data.get(user, {}).get('coins', 0)
+                reply.content = f"{user}，你已经连续签到{days}天了，目前一共有{coins}金币，呐，给你！"
+            except Exception as e:
+                logger.error(f"查看金币余额异常: {str(e)}")
+                reply.content = f"{user}，查询金币余额失败，请稍后再试。"
 
+            e_context['reply'] = reply
+            e_context.action = EventAction.BREAK_PASS
+
+    def update_data(self, user, sign_in_date):
+        if user not in self.sign_in_data:
+            self.sign_in_data[user] = {'days': 0, 'last_sign_in_date': None, 'coins': 0, 'first_sign_in': True}
+
+        # 更新连续签到天数和最后签到日期
+        last_sign_in_date = self.sign_in_data[user]['last_sign_in_date']
+        if last_sign_in_date and datetime.date.fromisoformat(last_sign_in_date) == sign_in_date - datetime.timedelta(days=1):
+            self.sign_in_data[user]['days'] += 1
+        else:
+            self.sign_in_data[user]['days'] = 1
+            self.sign_in_data[user]['last_sign_in_date'] = sign_in_date.isoformat()
+
+        # 奖励金币
+        coins = random.randint(10, 60)
+        first_sign_in_today = self.sign_in_data[user].get('first_sign_in', True)
+
+         if first_sign_in_today:
+            self.sign_in_data[user]['first_sign_in'] = False
+            coins += 40  # 首签奖励
+            response = f'恭喜你抢到了本群首签！额外奖励40金币。你已经连续签到 {self.sign_in_data[user]["days"]} 天，本次签到奖励 {coins} 金币。'
+        else:
+            response = f'你已经连续签到 {self.sign_in_data[user]["days"]} 天，本次签到奖励 {coins} 金币。'
+
+        self.sign_in_data[user]['coins'] += coins
+        save_data(self.sign_in_data)
+
+        return response
 
     def get_help_text(self, **kwargs):
-        help_text = "输入签到，我会进行签到\n"
+        help_text = "输入签到，我会进行签到\n输入查看金币余额，我会告诉你目前的金币总数\n"
         return help_text
+
+    def on_stop(self):
+        save_data(self.sign_in_data)
+        logger.info("[Goodbye] SignIn plugin stopped.")
