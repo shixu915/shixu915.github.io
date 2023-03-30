@@ -1,5 +1,6 @@
-import random
 from datetime import datetime
+import random
+
 from bridge.context import ContextType
 from bridge.reply import Reply, ReplyType
 import plugins
@@ -16,10 +17,10 @@ fortune_descriptions = [
 
 emoji_list = ['(＾▽＾)', '(￣▽￣)', '(*^▽^*)', '(╹◡╹)', 'ヾ(≧▽≦*)o']
 
-user_draw_history = {}
+group_draw_history = {}
 
 
-@plugins.register(name="FortuneTeller", desc="A simple fortune teller plugin", version="0.1", author="chenxu", desire_priority= 9)
+@plugins.register(name="FortuneTeller", desc="A simple fortune teller plugin", version="0.1", author="chenxu", desire_priority=9)
 class FortuneTeller(Plugin):
     def __init__(self):
         super().__init__()
@@ -37,26 +38,31 @@ class FortuneTeller(Plugin):
         try:
             if "抽签" in content:
                 user_id = e_context['context']['msg']['FromUserName']
+                group_id = e_context['context']['msg']['FromUserName'] if not e_context['context']['isgroup'] else e_context['context']['msg']['ToUserName']
                 today = datetime.now().strftime('%Y-%m-%d')
-                if user_id in user_draw_history and user_draw_history[user_id] == today:
+
+                if group_id not in group_draw_history:
+                    group_draw_history[group_id] = {}
+
+                if user_id in group_draw_history[group_id] and group_draw_history[group_id][user_id] == today:
                     reply = Reply()
                     reply.type = ReplyType.TEXT
                     reply.content = f"你今天已经抽签过了，不要妄图逆天改命哟~ {random.choice(emoji_list)}"
                 else:
-                    user_draw_history[user_id] = today
+                    group_draw_history[group_id][user_id] = today
                     fortune = random.choice(fortune_descriptions)
                     reply = Reply()
                     reply.type = ReplyType.TEXT
                     reply.content = f"今日运势：{fortune} {random.choice(emoji_list)}"
                 e_context['reply'] = reply
-                e_context.action = EventAction.BREAK_PASS # 事件结束，并跳过处理context的默认逻辑
+                e_context.action = EventAction.BREAK_PASS  # 事件结束，并跳过处理context的默认逻辑
         except Exception as e:
             logger.error(f"[FortuneTeller] Unexpected error: {e}")
             reply = Reply()
             reply.type = ReplyType.TEXT
             reply.content = "抽签过程中发生了错误，请稍后重试。"
             e_context['reply'] = reply
-            e_context.action = EventAction.BREAK_PASS # 事件结束，并跳过处理context的默认逻辑
+            e_context.action = EventAction.BREAK_PASS  # 事件结束，并跳过处理context的默认逻辑
 
     def get_help_text(self, **kwargs):
         help_text = "发送包含“抽签”关键词的消息，我会为您抽取今日运势。\n"
