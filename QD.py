@@ -11,7 +11,7 @@ def get_data():
     try:
         with open('sign_in_data.json') as file:
             return json.load(file)
-    except (FileNotFoundError, json.JSONDecodeError):
+    except Exception as e:
         return {}
 
 def save_data(sign_in_data):
@@ -22,12 +22,6 @@ def save_data(sign_in_data):
         logger.debug('save failed: %s' % str(e))
 
 @plugins.register(name="签到", desc="这是一个签到类插件", version="0.1", author="晨旭", desire_priority=10)
-class SignIn(Plugin):
-    def __init__(self):
-        super().__init__()
-        self.handlers[Event.ON_HANDLE_CONTEXT] = self.on_handle_context
-        self.sign_in_data = get_data()
-        logger.info("[SignIn] inited")
 class SignIn(Plugin):
     def __init__(self):
         super().__init__()
@@ -69,9 +63,11 @@ class SignIn(Plugin):
             reply = Reply()
             reply.type = ReplyType.TEXT
             try:
-                days = self.sign_in_data.get(user, {}).get('days', 0)
-                coins = self.sign_in_data.get(user, {}).get('coins', 0)
-                reply.content = f"{user}，你已经连续签到{days}天了，目前一共有{coins}金币，呐，给你！"
+                with open("sign_in_data.json", "r") as f:
+                    sign_in_data1 = json.load(f)
+                    days = sign_in_data1.get(user, {}).get('days', 0)
+                    coins = sign_in_data1.get(user, {}).get('coins', 0)
+                    reply.content = f"{user}，你已经连续签到{days}天了，目前一共有{coins}金币，呐，给你！"
             except Exception as e:
                 logger.error(f"查看金币余额异常: {str(e)}")
                 reply.content = f"{user}，查询金币余额失败，请稍后再试。"
@@ -95,7 +91,7 @@ class SignIn(Plugin):
         coins = random.randint(10, 60)
         first_sign_in_today = self.sign_in_data[user].get('first_sign_in', True)
 
-         if first_sign_in_today:
+        if first_sign_in_today:
             self.sign_in_data[user]['first_sign_in'] = False
             coins += 40  # 首签奖励
             response = f'恭喜你抢到了本群首签！额外奖励40金币。你已经连续签到 {self.sign_in_data[user]["days"]} 天，本次签到奖励 {coins} 金币。'
