@@ -38,8 +38,8 @@ class FortuneTeller(Plugin):
         try:
             if "抽签" in content:
                 user_id = e_context['context']['msg']['FromUserName']
-                group_id = e_context['context']['msg']['FromUserName'] if not e_context['context']['isgroup'] else e_context['context']['msg']['ToUserName']
-                today = datetime.now().strftime('%Y-%m-%d')
+                group_id = e_context['context']['msg']['ToUserName'] if e_context['context']['isgroup'] else e_context['context']['msg']['FromUserName']
+                today = datetime.now().date().isoformat()
 
                 if group_id not in group_draw_history:
                     group_draw_history[group_id] = {}
