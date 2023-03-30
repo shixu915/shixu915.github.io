@@ -64,7 +64,7 @@ class SongGuessing(Plugin):
             reply.content = "竞猜过程中发生了错误，请稍后重试。"
             e_context['reply'] = reply
             e_context.action = EventAction.BREAK_PASS
-        
-        def get_help_text(self, **kwargs):
-            help_text = "发送包含“每日竞猜”关键词的消息，我会为您提供一首歌曲，每天第一位猜中的成员可以获得100金币奖励。\n"
-            return help_text
+
+    def get_help_text(self, **kwargs):
+        help_text = "发送包含“每日竞猜”关键词的消息，我会为您提供一首歌曲，每天第一位猜中的成员可以获得100金币奖励。\n"
+    return help_text
