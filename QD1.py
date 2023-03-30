@@ -54,11 +54,11 @@ class SignIn(Plugin):
                 if last_sign_in_date and datetime.date.fromisoformat(last_sign_in_date) == today:
                     reply.content = f'{user}，你今天已经签到过了，不能再签到了哦！'
                 else:
-                    reply.content = self.update_data(user, today)
+                    reply.content = self.update_data(user, today, group_id)
             except Exception as e:
                 logger.error(f"签到异常: {str(e)}")
                 reply.content = f"{user}，签到失败，请稍后再试。"
-                
+
             e_context['reply'] = reply
             e_context.action = EventAction.BREAK_PASS
 
@@ -78,7 +78,7 @@ class SignIn(Plugin):
             e_context['reply'] = reply
             e_context.action = EventAction.BREAK_PASS
 
-    def update_data(self, user, sign_in_date):
+    def update_data(self, user, sign_in_date, group_id):
         if user not in self.sign_in_data:
             self.sign_in_data[user] = {'days': 0, 'last_sign_in_date': None, 'coins': 0, 'first_sign_in': True}
 
@@ -94,7 +94,7 @@ class SignIn(Plugin):
         coins = random.randint(10, 60)
         first_sign_in_today = self.sign_in_data[user].get('first_sign_in', True)
 
-        group_key = f'group_{group_id}' if group_id else 'private'
+       group_key = f'group_{group_id}' if group_id else 'private'
         if group_key not in self.sign_in_data:
             self.sign_in_data[group_key] = {'first_sign_in_today': True}
 
