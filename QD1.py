@@ -13,6 +13,7 @@ def get_data():
         with open('sign_in_data.json') as file:
             return json.load(file)
     except Exception as e:
+        logger.debug('Load data failed: %s' % str(e))
         return {}
 
 def save_data(sign_in_data):
@@ -20,7 +21,8 @@ def save_data(sign_in_data):
         with open('sign_in_data.json', 'w') as file:
             json.dump(sign_in_data, file)
     except Exception as e:
-        logger.debug('save failed: %s' % str(e))
+        logger.debug('Save data failed: %s' % str(e))
+
 
 @plugins.register(name="签到", desc="这是一个签到类插件", version="0.1", author="晨旭", desire_priority=10)
 class SignIn(Plugin):
@@ -39,10 +41,11 @@ class SignIn(Plugin):
 
         if e_context['context']['isgroup']:
             user = msg['ActualNickName'] + " from " + msg['User'].get('NickName', "Group")
-            group_id = hashlib.md5(msg['FromUserName'].encode()).hexdigest()
+            group_id = msg['FromUserName']
         else:
             user = msg['User'].get('NickName', "My friend")
             group_id = None
+
 
         if content == '签到':
             reply = Reply()
@@ -88,15 +91,17 @@ class SignIn(Plugin):
             self.sign_in_data[user]['days'] += 1
         else:
             self.sign_in_data[user]['days'] = 1
-            self.sign_in_data[user]['last_sign_in_date'] = sign_in_date.isoformat()
+
+        self.sign_in_data[user]['last_sign_in_date'] = sign_in_date.isoformat()
+
 
         # 奖励金币
         coins = random.randint(10, 60)
-        first_sign_in_today = self.sign_in_data[user].get('first_sign_in', True)
 
-       group_key = f'group_{group_id}' if group_id else 'private'
+        group_key = f'group_{group_id}_{user}' if group_id else f'private_{user}'
+
         if group_key not in self.sign_in_data:
-            self.sign_in_data[group_key] = {'first_sign_in_today': True}
+           self.sign_in_data[group_key] = {'first_sign_in_today': True}
 
         if self.sign_in_data[group_key]['first_sign_in_today']:
             self.sign_in_data[group_key]['first_sign_in_today'] = False
