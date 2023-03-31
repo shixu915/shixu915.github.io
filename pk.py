@@ -3,49 +3,62 @@ import os
 import random
 import datetime
 from typing import Dict
-
+import re
 from bridge.context import ContextType
 from bridge.reply import Reply, ReplyType, ReplyImage
 import plugins
 from plugins import *
 from common.log import logger
+from json import JSONDecodeError
 
 image_folder_path = "path/to/your/image/folder"
 
-# 读取金币文件
-def read_gold_data() -> Dict[str, int]:
-    with open("sign_in_data.json", "r") as f:
-        return json.load(f)
+class DataHandler:
+    def __init__(self, file_path):
+        self.file_path = file_path
 
-# 保存金币文件
-def save_gold_data(data: Dict[str, int]):
-    with open("sign_in_data.json", "w") as f:
-        json.dump(data, f, indent=2)
+    def read_data(self):
+        if not os.path.exists(self.file_path):
+            return {}
 
-# 读取角色文件
-def read_role_data() -> Dict[str, Dict]:
-    with open("role.json", "r") as f:
-        return json.load(f)
+        try:
+            with open(self.file_path, "r") as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            logger.error(f"File not found: {self.file_path}")
+            return {}
+        except JSONDecodeError as e:
+            logger.error(f"Error decoding JSON data from {self.file_path}: {e}")
+            return {}
+        return data
 
-# 保存角色文件
-def save_role_data(data: Dict[str, Dict]):
-    with open("role.json", "w") as f:
-        json.dump(data, f, indent=2)
+    def save_data(self, data):
+        with open(self.file_path, "w") as f:
+            json.dump(data, f, indent=2)
 
-# 添加今日培养记录
-def save_train_record(user_id: str, today: str):
-    with open("train_record.json", "r") as f:
-        data = json.load(f)
-    data[user_id] = today
-    with open("train_record.json", "w") as f:
-        json.dump(data, f, indent=2)
+gold_data_handler = DataHandler("sign_in_data.json")
+role_data_handler = DataHandler("role.json")
+train_record_data_handler = DataHandler("train_record.json")
 
-# 检查今天是否已经培养过角色
+# 读取培养记录文件
+def read_train_record_data() -> Dict[str, str]:
+    return train_record_data_handler.read_data()
+
+# 保存培养记录文件
+def save_train_record_data(data: Dict[str, str]):
+    train_record_data_handler.save_data(data)
+
+# 检查用户今天是否已经培养过角色
 def check_train_today(user_id: str) -> bool:
+    train_record_data = read_train_record_data()
     today = datetime.date.today().strftime('%Y-%m-%d')
-    with open("train_record.json", "r") as f:
-        data = json.load(f)
-    return data.get(user_id, "") == today
+    return train_record_data.get(user_id) == today
+
+# 保存用户培养角色的记录
+def save_train_record(user_id: str, date: str):
+    train_record_data = read_train_record_data()
+    train_record_data[user_id] = date
+    save_train_record_data(train_record_data)
 
 role_names = [
     '穹妹',
@@ -66,22 +79,25 @@ def create_random_role(name):
     }
     return role
 
-
-#获取属性总值最大的角色
+# 获取当前擂台上的最强角色
 def get_top_role() -> Dict:
-    role_data = read_role_data()
-    max_role = max(role_data.values(), key=lambda x: x['攻击'] + x['防御'] + x['速度'])
-    return max_role
+    role_data = role_data_handler.read_data()
+    top_role = None
+    max_score = -1
+    for role in role_data.values():
+        score = role['攻击'] + role['防御'] + role['速度']
+        if score > max_score:
+            max_score = score
+            top_role = role
+    return top_role
 
-
-#获取拥有最大角色的用户ID
-def get_top_role_owner(role: Dict) -> str:
-    role_data = read_role_data()
-    for user_id, r in role_data.items():
-        if r == role:
+# 获取最强角色的拥有者
+def get_top_role_owner(top_role: Dict) -> str:
+    role_data = role_data_handler.read_data()
+    for user_id, role in role_data.items():
+        if role == top_role:
             return user_id
-    return ""
-
+    return "未知"
 
 @plugins.register(name="RoleGame", desc="A simple role game plugin", version="0.1", author="Assistant", desire_priority=9)
 class RoleGame(Plugin):
@@ -89,9 +105,10 @@ class RoleGame(Plugin):
         super().init()
         self.handlers[Event.ON_HANDLE_CONTEXT] = self.on_handle_context
         logger.info("[RoleGame] inited")
-def on_handle_context(self, e_context: EventContext):
-    if e_context['context'].type != ContextType.TEXT:
-        return
+
+    def on_handle_context(self, e_context: EventContext):
+        if e_context['context'].type != ContextType.TEXT:
+            return
 
     content = e_context['context'].content
     logger.debug("[RoleGame] on_handle_context. content: %s" % content)
@@ -144,11 +161,15 @@ def on_handle_context(self, e_context: EventContext):
        # 决斗
         elif "决斗" in content:
             # 解析出对方用户ID
-            target_user_id = "some_logic_to_extract_target_user_id_from_content"
-            if user_id not in role_data or target_user_id not in role_data:
+            target_user_id = re.search(r'@(\w+)', content)
+            if target_user_id:
+                target_user_id = target_user_id.group(1)
+            else:
                 reply = Reply()
                 reply.type = ReplyType.TEXT
-                reply.content = "您或对方还没有抽取到任何角色，请先抽取角色。"
+                reply.content = "请@一个对方用户来发起决斗。"
+                e_context['reply'] = reply
+                return
 
             else:
                 my_role = role_data[user_id]
@@ -221,56 +242,11 @@ def on_handle_context(self, e_context: EventContext):
             reply.content = "游戏过程中发生了错误，请稍后重试。"
             e_context['reply'] = reply
 
-def get_help_text(self, **kwargs):
-    help_text = ("发送包含“抽取角色”关键词的消息，我会为您抽取一个角色；\n"
-                 "发送包含“查看角色”关键词的消息，我会为您展示您当前的角色；\n"
-                 "发送包含“决斗”关键词的消息并@对方，我会根据您和对方的角色属性进行决斗，并返回结果；\n"
-                 "发送包含“培养角色”关键词的消息，我会为您随机增加角色的攻击、防御或速度属性；\n"
-                 "发送包含“查看擂台”关键词的消息，我会为您展示当前擂台上的最强角色及其拥有者。")
-    return help_text
-
-
-# 读取培养记录文件
-def read_train_record_data() -> Dict[str, str]:
-    with open("train_record.json", "r") as f:
-        return json.load(f)
-
-# 保存培养记录文件
-def save_train_record_data(data: Dict[str, str]):
-    with open("train_record.json", "w") as f:
-        json.dump(data, f, indent=2)
-
-# 检查用户今天是否已经培养过角色
-def check_train_today(user_id: str) -> bool:
-    train_record_data = read_train_record_data()
-    today = datetime.date.today().strftime('%Y-%m-%d')
-    return train_record_data.get(user_id) == today
-
-# 保存用户培养角色的记录
-def save_train_record(user_id: str, date: str):
-    train_record_data = read_train_record_data()
-    train_record_data[user_id] = date
-    save_train_record_data(train_record_data)
-
-# 获取当前擂台上的最强角色
-def get_top_role() -> Dict:
-    role_data = read_role_data()
-    top_role = None
-    max_score = -1
-    for role in role_data.values():
-        score = role['攻击'] + role['防御'] + role['速度']
-        if score > max_score:
-            max_score = score
-            top_role = role
-    return top_role
-
-# 获取最强角色的拥有者
-def get_top_role_owner(top_role: Dict) -> str:
-    role_data = read_role_data()
-    for user_id, role in role_data.items():
-        if role == top_role:
-            return user_id
-    return "未知"
-
-
+    def get_help_text(self, **kwargs):
+        help_text = ("发送包含“抽取角色”关键词的消息，我会为您抽取一个角色；\n"
+                     "发送包含“查看角色”关键词的消息，我会为您展示您当前的角色；\n"
+                     "发送包含“决斗”关键词的消息并@对方，我会根据您和对方的角色属性进行决斗，并返回结果；\n"
+                     "发送包含“培养角色”关键词的消息，我会为您随机增加角色的攻击、防御或速度属性；\n"
+                     "发送包含“查看擂台”关键词的消息，我会为您展示当前擂台上的最强角色及其拥有者。")
+        return help_text
 
