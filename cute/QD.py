@@ -56,7 +56,7 @@ class SignIn(Plugin):
                 logger.error(f"查看金币余额异常: {str(e)}")
                 reply.content = f"{user}，查询金币余额失败，请稍后再试。"
 
-                        e_context['reply'] = reply
+            e_context['reply'] = reply
             e_context.action = EventAction.BREAK_PASS
 
     def update_data(self, user, sign_in_date):
