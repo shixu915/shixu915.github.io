@@ -1,0 +1,83 @@
+appId: com.xiaoluban.ticket-assistant
+productName: 小鲁班抢票助手
+copyright: Copyright © 2024 XiaoLuBan Team
+
+directories:
+  output: release
+  buildResources: resources
+
+files:
+  - dist/**/*
+  - resources/**/*
+  - data/**/*
+  - package.json
+
+extraResources:
+  - from: data
+    to: data
+    filter:
+      - "**/*"
+
+win:
+  icon: resources/icons/icon.ico
+  target:
+    - target: nsis
+      arch:
+        - x64
+        - ia32
+    - target: portable
+      arch:
+        - x64
+  artifactName: ${productName}-${version}-${arch}.${ext}
+
+nsis:
+  oneClick: false
+  allowElevation: true
+  allowToChangeInstallationDirectory: true
+  installerIcon: resources/icons/icon.ico
+  uninstallerIcon: resources/icons/icon.ico
+  installerHeaderIcon: resources/icons/icon.ico
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: ${productName}
+
+mac:
+  icon: resources/icons/icon.icns
+  category: public.app-category.utilities
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+    - target: zip
+      arch:
+        - x64
+        - arm64
+  artifactName: ${productName}-${version}-${arch}.${ext}
+  hardenedRuntime: true
+  gatekeeperAssess: false
+
+dmg:
+  background: resources/images/dmg-background.png
+  iconSize: 100
+  contents:
+    - x: 380
+      y: 180
+      type: link
+      path: /Applications
+    - x: 130
+      y: 180
+      type: file
+
+linux:
+  icon: resources/icons
+  target:
+    - AppImage
+    - deb
+  category: Utility
+  maintainer: XiaoLuBan Team
+
+publish:
+  provider: github
+  owner: xiaoluban
+  repo: ticket-assistant
