@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>樱花树下的害羞时刻</title>
+    <style>
+        /* --- 基础设置 --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body, html { width: 100%; height: 100%; overflow: hidden; font-family: "PingFang SC", "Georgia", serif; }
+
+        /* --- 通用层 --- */
+        .layer {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1), transform 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 10;
+        }
+
+        /* --- 第一层：引导页 --- */
+        #intro-layer {
+            background: linear-gradient(to bottom, #fff5f7, #fff0f5);
+            z-index: 20;
+        }
+        /* 隐藏状态 */
+        #intro-layer.hidden {
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(1.05);
+        }
+        
+        .intro-content {
+            text-align: center;
+            padding: 40px 20px;
+        }
+        
+        .intro-title {
+            font-size: 28px;
+            color: #6a5acd; /* 淡紫色，温柔感 */
+            margin-bottom: 60px;
+            font-weight: 500;
+            letter-spacing: 2px;
+            line-height: 1.6;
+        }
+
+        .choice-btn {
+            display: block;
+            margin: 20px auto;
+            padding: 12px 45px;
+            font-size: 15px;
+            color: #fff;
+            background: linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%);
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 6px 15px rgba(161, 140, 209, 0.4);
+            transition: all 0.3s ease;
+            outline: none;
+            -webkit-tap-highlight-color: transparent;
+            letter-spacing: 1px;
+        }
+        .choice-btn:active {
+            transform: scale(0.95);
+            box-shadow: 0 3px 8px rgba(161, 140, 209, 0.3);
+        }
+
+        /* --- 第二层：樱花画布 --- */
+        #sakura-layer {
+            /* 柔和的春日天空渐变 */
+            background: radial-gradient(circle at 50% 20%, #fff5f7 0%, #ffe6f2 50%, #ffdde4 100%);
+            z-index: 1;
+            opacity: 0;
+            pointer-events: none; /* 默认不响应点击，显示后才响应 */
+        }
+        #sakura-layer.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+        
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* --- 最终文字容器 (增加背景板提升清晰度) --- */
+        #final-message-container {
+            position: absolute;
+            top: 15%;
+            width: 80%;
+            max-width: 500px;
+            text-align: center;
+            z-index: 5;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 1.5s ease;
+        }
+        #final-message-container.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* --- 最终文字样式 (优化清晰度) --- */
+        #final-message {
+            font-size: 26px;
+            color: #4a4a4a; /* 深灰色，比纯黑柔和，但比白色清晰 */
+            font-weight: 500;
+            letter-spacing: 2px;
+            line-height: 1.6;
+            
+            /* 关键：文字描边/阴影，确保在任何背景下清晰 */
+            text-shadow: 
+                1px 1px 0 #fff, 
+                -1px -1px 0 #fff,  
+                1px -1px 0 #fff,
+                -1px 1px 0 #fff,
+                0 2px 10px rgba(255, 255, 255, 0.8);
+            
+            /* 背景板，进一步隔离背景干扰 */
+            background: rgba(255, 255, 255, 0.4);
+            padding: 20px 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(5px); /* 毛玻璃效果 */
+            border: 1px solid rgba(255, 255, 255, 0.6);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 第一层：引导页 -->
+    <div id="intro-layer" class="layer">
+        <div class="intro-content">
+            <div class="intro-title">樱花都开了<br>要不要一起看看？</div>
+            <button class="choice-btn" onclick="startRomance('under')">嗯，一起吧</button>
+            <button class="choice-btn" onclick="startRomance('shy')">我有点害羞...</button>
+        </div>
+    </div>
+
+    <!-- 第二层：樱花动画层 -->
+    <div id="sakura-layer" class="layer">
+        <div id="final-message-container">
+            <div id="final-message"></div>
+        </div>
+        <canvas id="canvas"></canvas>
+    </div>
+
+    <script>
+        // --- 配置参数 ---
+        const CONFIG = {
+            treeColor: '#5c4033', // 树枝颜色
+            petalColor: '#ffb7b2', // 花瓣颜色
+            petalCount: 80, // 屏幕上同时存在的最大花瓣数
+            gravity: 0.12, // 重力加速度
+            windStrength: 0.8, // 风力强度
+            burstCount: 50 // 点击爆发数量
+        };
+
+        let canvas, ctx;
+        let bgCanvas, bgCtx; // 离屏Canvas，用于绘制静态树枝
+        let width, height;
+        let particles = [];
+        let animationId;
+        let time = 0; // 时间变量，用于模拟风的波动
+
+        // --- 初始化 ---
+        function init() {
+            canvas = document.getElementById('canvas');
+            ctx = canvas.getContext('2d');
+            
+            // 创建离屏Canvas用于绘制背景树
+            bgCanvas = document.createElement('canvas');
+            bgCtx = bgCanvas.getContext('2d');
+
+            resize();
+            window.addEventListener('resize', resize);
+            
+            // 绑定触摸/点击事件用于制造局部风暴
+            canvas.addEventListener('mousedown', createBurst);
+            canvas.addEventListener('touchstart', createBurst, {passive: false});
+        }
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            
+            // 重置离屏Canvas尺寸并重绘背景树
+            bgCanvas.width = width;
+            bgCanvas.height = height;
+            generateTree(); 
+        }
+
+        // --- 生成手绘风格樱花树 (使用贝塞尔曲线模拟毛笔) ---
+        function generateTree() {
+            bgCtx.clearRect(0, 0, width, height);
+            const startX = width / 2;
+            const startY = height;
+            
+            // 绘制主干，使用曲线
+            drawBranchBezier(bgCtx, startX, startY, -Math.PI / 2, height * 0.6, 18, 0);
+        }
+
+        // 递归绘制树枝 (贝塞尔曲线版本)
+        function drawBranchBezier(ctx, x, y, angle, len, width, depth) {
+            if (depth > 5 || len < 5) {
+                // 在末端绘制樱花簇
+                if (depth > 3) {
+                    drawFlowerCluster(ctx, x, y);
+                }
+                return;
+            }
+
+            // 计算终点
+            const endX = x + Math.cos(angle) * len;
+            const endY = y + Math.sin(angle) * len;
+
+            // 控制点：让线条产生自然的弯曲
+            const cpX = (x + endX) / 2 + (Math.random() - 0.5) * len * 0.2;
+            const cpY = (y + endY) / 2 + (Math.random() - 0.5) * len * 0.2;
+
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.quadraticCurveTo(cpX, cpY, endX, endY);
+            
+            // 样式设置：模拟毛笔的粗细变化
+            ctx.strokeStyle = CONFIG.treeColor;
+            ctx.lineWidth = width;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.stroke();
+
+            // 递归绘制下级树枝
+            const newLen = len * 0.75;
+            const newWidth = width * 0.7;
+            
+            // 左分支
+            drawBranchBezier(ctx, endX, endY, angle - 0.5 + Math.random()*0.2, newLen, newWidth, depth + 1);
+            // 右分支
+            drawBranchBezier(ctx, endX, endY, angle + 0.5 + Math.random()*0.2, newLen, newWidth, depth + 1);
+            // 中间偶尔分支
+            if (Math.random() > 0.7) {
+                drawBranchBezier(ctx, endX, endY, angle + (Math.random()-0.5)*0.3, newLen * 0.8, newWidth, depth + 1);
+            }
+        }
+
+        // 绘制樱花簇
+        function drawFlowerCluster(ctx, x, y) {
+            const count = Math.floor(Math.random() * 3) + 2;
+            for (let i = 0; i < count; i++) {
+                const fx = x + (Math.random() - 0.5) * 20;
+                const fy = y + (Math.random() - 0.5) * 20;
+                ctx.beginPath();
+                ctx.arc(fx, fy, 5 + Math.random() * 3, 0, Math.PI * 2);
+                ctx.fillStyle = CONFIG.petalColor;
+                ctx.fill();
+                // 花蕊
+                ctx.beginPath();
+                ctx.arc(fx, fy, 1.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#fff';
+                ctx.fill();
+            }
+        }
+
+        // --- 粒子类 (真实物理模拟) ---
+        class Particle {
+            constructor(x, y, isBurst = false) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 6 + 4; // 4-10px
+                this.speedY = Math.random() * 1 + 0.5; // 初始下落速度
+                this.speedX = (Math.random() - 0.5) * 1; // 初始水平速度
+                this.rotation = Math.random() * 360;
+                this.rotationSpeed = (Math.random() - 0.5) * 2;
+                this.opacity = Math.random() * 0.5 + 0.5;
+                this.isBurst = isBurst;
+                this.life = 1; // 生命值
+                this.decay = 0.003; // 自然衰减速度
+            }
+
+            update() {
+                // 1. 应用重力
+                this.speedY += CONFIG.gravity * 0.1; 
+                
+                // 2. 应用风力 (正弦波模拟阵风)
+                const wind = Math.sin(time * 0.02 + this.x * 0.01) * CONFIG.windStrength;
+                this.speedX += wind * 0.05;
+
+                // 3. 应用空气阻力
+                this.speedX *= 0.99;
+                this.speedY *= 0.99;
+
+                // 4. 更新位置
+                this.x += this.speedX;
+                this.y += this.speedY;
+
+                // 5. 更新旋转
+                this.rotation += this.rotationSpeed + (this.speedX * 0.1);
+
+                // 6. 生命衰减
+                if (this.y > height - 50) {
+                    this.life -= 0.05; // 落地后加速消失
+                } else {
+                    this.life -= this.decay;
+                }
+                
+                this.opacity = Math.max(0, this.life);
+                return this.life > 0;
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation * Math.PI / 180);
+                ctx.globalAlpha = this.opacity;
+                ctx.fillStyle = CONFIG.petalColor;
+                
+                // 绘制花瓣形状
+                ctx.beginPath();
+                // 椭圆花瓣
+                ctx.ellipse(0, 0, this.size, this.size * 0.6, 0, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
+        }
+
+        // --- 核心逻辑 ---
+
+        // 1. 开始浪漫 (修复了这里的逻辑)
+        function startRomance(choice) {
+            const intro = document.getElementById('intro-layer');
+            const sakura = document.getElementById('sakura-layer');
+            const msgContainer = document.getElementById('final-message-container');
+            const msg = document.getElementById('final-message');
+
+            // 1. 隐藏引导页
+            intro.classList.add('hidden');
+
+            // 2. 延迟一点显示樱花层，确保过渡自然
+            setTimeout(() => {
+                sakura.classList.add('visible');
+                
+                // 初始化Canvas
+                init();
+                
+                // 生成初始花瓣
+                for (let i = 0; i < CONFIG.petalCount; i++) {
+                    particles.push(createRandomPetal());
+                }
+
+                // 启动动画循环
+                animate();
+
+                // 根据选择显示不同的害羞文案
+                if (choice === 'under') {
+                    msg.textContent = "其实，我一直想和你一起看樱花 🌸";
+                } else {
+                    msg.textContent = "我有点害羞...但你在这里，就不怕了 🌸";
+                }
+                
+                // 延迟显示文字
+                setTimeout(() => {
+                    msgContainer.classList.add('show');
+                }, 1500);
+
+            }, 600); // 600ms 延迟，让淡出动画先走一部分
+        }
+
+        // 创建随机位置的花瓣（从树冠区域生成）
+        function createRandomPetal() {
+            const treeTop = height * 0.2;
+            const treeWidth = width * 0.8;
+            const x = (width / 2) + (Math.random() - 0.5) * treeWidth;
+            const y = treeTop + Math.random() * (height * 0.2);
+            return new Particle(x, y);
+        }
+
+        // 2. 创建爆发效果
+        function createBurst(e) {
+            e.preventDefault();
+            let x, y;
+            if (e.type === 'touchstart') {
+                x = e.touches[0].clientX;
+                y = e.touches[0].clientY;
+            } else {
+                x = e.clientX;
+                y = e.clientY;
+            }
+
+            for (let i = 0; i < CONFIG.burstCount; i++) {
+                const p = new Particle(x, y, true);
+                // 爆发赋予随机大速度
+                const angle = Math.random() * Math.PI * 2;
+                const velocity = Math.random() * 10 + 2;
+                p.speedX = Math.cos(angle) * velocity;
+                p.speedY = Math.sin(angle) * velocity;
+                p.gravity = 0.2; // 爆发时重力稍大
+                particles.push(p);
+            }
+        }
+
+        // 3. 动画循环
+        function animate() {
+            // 清空当前Canvas
+            ctx.clearRect(0, 0, width, height);
+            
+            // 1. 绘制背景树 (从离屏Canvas复制)
+            ctx.drawImage(bgCanvas, 0, 0);
+
+            // 2. 更新和绘制花瓣
+            for (let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                if (!p.update()) {
+                    // 如果粒子生命结束，移除它
+                    particles.splice(i, 1);
+                } else {
+                    p.draw();
+                }
+            }
+
+            // 3. 补充新生花瓣 (保持屏幕上有足够的花瓣)
+            // 如果当前花瓣少于设定数量，则随机补充
+            if (particles.length < CONFIG.petalCount) {
+                particles.push(createRandomPetal());
+            }
+
+            // 4. 更新时间变量
+            time++;
+
+            // 5. 请求下一帧动画
+            animationId = requestAnimationFrame(animate);
+        }
+    </script>
+</body>
+</html>
+
