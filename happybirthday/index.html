@@ -1,0 +1,294 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "htt`://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xml:lang="en" xmlns="http://www.w3.org/1999/xhtml"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <title>祝小陈生日快乐!</title>     
+    <link type="text/css" rel="stylesheet" href="./css/default.css">
+    <script type="text/javascript" src="./css/jquery.min.js"></script>
+    <script type="text/javascript" src="./css/jscex.min.js"></script>
+    <script type="text/javascript" src="./css/jscex-parser.js"></script>
+    <script type="text/javascript" src="./css/jscex-jit.js"></script>
+    <script type="text/javascript" src="./css/jscex-builderbase.min.js"></script>
+    <script type="text/javascript" src="./css/jscex-async.min.js"></script>
+    <script type="text/javascript" src="./css/jscex-async-powerpack.min.js"></script>
+    <script type="text/javascript" src="./css/functions.js" charset="utf-8"></script>
+    <script type="text/javascript" src="./css/love.js" charset="utf-8"></script>
+      <style type="text/css">
+
+.STYLE1 {color: #666666}
+/* 新增：专属宇宙浪漫开场遮罩样式 */
+#welcome-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #1f1c2c 0%, #928dab 100%); /* 唯美深夜星空渐变色 */
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    transition: opacity 1.5s ease;
+}
+.welcome-box {
+    text-align: center;
+    color: #fff;
+    font-family: "Microsoft YaHei", sans-serif;
+    animation: fadeIn 2s ease-in-out;
+}
+.welcome-title {
+    font-size: 26px;
+    font-weight: 300;
+    letter-spacing: 2px;
+    margin-bottom: 10px;
+    text-shadow: 0 0 10px rgba(255,192,203,0.5);
+}
+.welcome-subtitle {
+    font-size: 16px;
+    color: #ffd1dc;
+    margin-bottom: 40px;
+    letter-spacing: 1px;
+}
+.welcome-btn {
+    padding: 12px 35px;
+    font-size: 18px;
+    color: #fff;
+    background: linear-gradient(45deg, #ff758c 0%, #ff7eb3 100%); /* 浪漫樱花粉按钮 */
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(255, 117, 140, 0.4);
+    transition: all 0.3s ease;
+}
+.welcome-btn:hover {
+    transform: scale(1.08);
+    box-shadow: 0 8px 25px rgba(255, 117, 140, 0.6);
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+
+        </style>
+</head>
+    <body>
+      <audio id="bgm" loop>
+          <source src="music/love.mp3" type="audio/mp3" />
+      </audio> 
+
+      <!-- 新增：浪漫交互开场动画层 -->
+<div id="welcome-overlay">
+    <div class="welcome-box">
+        <h2 class="welcome-title">🌸 这里有一份属于小陈的专属宇宙 — 开启生日惊喜 ✨</h2>
+        <p class="welcome-subtitle">（ 准备好接收今天的第一份浪漫了吗？ ）</p>
+        <!-- 幽默文案指引按钮 -->
+        <button class="welcome-btn" onclick="startSurprise()">👉 请奶农大王点这里 👈</button>
+    </div>
+</div>
+
+
+        <div id="main">
+             <div id="wrap">
+                <div id="text">
+              <div id="code">
+            <font color="#FF0000">    
+<span class="say"><h1>我希望有个如你一般的人</h1></span><br><br>
+<span class="say">我希望有个如你一般的人。</span><br> <br>    
+<span class="say">如这山间清晨一般明亮清爽，</span><br><br>
+<span class="say">如奔赴古城道路上阳光一般的人，</span><br><br>
+<span class="say">温暖而不炙热，覆盖我所有肌肤。</span><br><br>
+<span class="say">由起点到夜晚，由山野到书房，一切问题的答案都很简单。</span><br><br>
+<span class="say">我希望有个如你一般的人，贯彻未来，数遍生命的公路牌。</span><br><br>
+<span class="say"><span class="space"></span> -- 石晨旭--</span><br>
+<span class="say"><h1>祝小陈生日快乐!</h1></span><br>
+        </font>
+      </div>
+                </div>
+                <div id="clock-box">
+<span class="STYLE1"></span><font color="#33CC00">距离我们相识，</font>
+<span class="STYLE1">已经是……</span> 
+<span class="STYLE1"></span>
+<font color="#33CC00"></font>
+<span class="STYLE1"></span>
+<div id="clock"></div>
+              </div>
+                <canvas id="canvas" width="1100" height="680"></canvas>
+            </div>
+            
+        </div>
+    
+    <script>
+    </script>
+
+    <script>
+    (function(){
+        var canvas = $('#canvas');
+    
+        if (!canvas[0].getContext) {
+            $("#error").show();
+            return false;        }
+
+        var width = canvas.width();
+        var height = canvas.height();        
+        canvas.attr("width", width);
+        canvas.attr("height", height);
+        var opts = {
+            seed: {
+                x: width / 2 - 20,
+                color: "rgb(190, 26, 37)",
+                scale: 2
+            },
+            branch: [
+                [535, 680, 570, 250, 500, 200, 30, 100, [
+                    [540, 500, 455, 417, 340, 400, 13, 100, [
+                        [450, 435, 434, 430, 394, 395, 2, 40]
+                    ]],
+                    [550, 445, 600, 356, 680, 345, 12, 100, [
+                        [578, 400, 648, 409, 661, 426, 3, 80]
+                    ]],
+                    [539, 281, 537, 248, 534, 217, 3, 40],
+                    [546, 397, 413, 247, 328, 244, 9, 80, [
+                        [427, 286, 383, 253, 371, 205, 2, 40],
+                        [498, 345, 435, 315, 395, 330, 4, 60]
+                    ]],
+                    [546, 357, 608, 252, 678, 221, 6, 100, [
+                        [590, 293, 646, 277, 648, 271, 2, 80]
+                    ]]
+                ]] 
+            ],
+            bloom: {
+                num: 700,
+                width: 1080,
+                height: 650,
+            },
+            footer: {
+                width: 1200,
+                height: 5,
+                speed: 10,
+            }
+        }
+
+        var tree = new Tree(canvas[0], width, height, opts);
+        var seed = tree.seed;
+        var foot = tree.footer;
+        var hold = 1;
+        // 修改：将原来的点击红心改为点击唯美遮罩按钮触发
+window.startSurprise = function() {
+    // 1. 唯美淡出引导屏并销毁
+    $('#welcome-overlay').css('opacity', '0');
+    setTimeout(function() {
+        $('#welcome-overlay').remove();
+    }, 1500);
+
+    // 2. 触发音乐播放（解决浏览器限制不让自动播放的问题）
+    var audio = $('#bgm')[0];
+    if (audio) {
+        audio.play().catch(function(err){
+            console.log("音频播放被拦截，需要用户交互", err);
+        });
+    }
+
+    // 3. 直接释放控制锁，让爱心树开始浪漫生长！
+    hold = 0; 
+    canvas.unbind("click");
+    canvas.unbind("mousemove");
+    canvas.removeClass('hand');
+};
+
+// 依然保留鼠标悬浮爱心红点时的手势效果
+canvas.mousemove(function(e){
+    var offset = canvas.offset(), x, y;
+    x = e.pageX - offset.left;
+    y = e.pageY - offset.top;
+    canvas.toggleClass('hand', seed.hover(x, y));
+});
+
+
+        var seedAnimate = eval(Jscex.compile("async", function () {
+            seed.draw();
+            while (hold) {
+                $await(Jscex.Async.sleep(10));
+            }
+            while (seed.canScale()) {
+                seed.scale(0.95);
+                $await(Jscex.Async.sleep(10));
+            }
+            while (seed.canMove()) {
+                seed.move(0, 2);
+                foot.draw();
+                $await(Jscex.Async.sleep(10));
+            }
+        }));
+
+        var growAnimate = eval(Jscex.compile("async", function () {
+            do {
+              tree.grow();
+                $await(Jscex.Async.sleep(10));
+            } while (tree.canGrow());
+        }));
+
+        var flowAnimate = eval(Jscex.compile("async", function () {
+            do {
+              tree.flower(2);
+                $await(Jscex.Async.sleep(10));
+            } while (tree.canFlower());
+        }));
+
+        var moveAnimate = eval(Jscex.compile("async", function () {
+            tree.snapshot("p1", 240, 0, 610, 680);
+            while (tree.move("p1", 500, 0)) {
+                foot.draw();
+                $await(Jscex.Async.sleep(10));
+            }
+            foot.draw();
+            tree.snapshot("p2", 500, 0, 610, 680);
+
+            // 会有闪烁不得意这样做, (＞﹏＜)
+            canvas.parent().css("background", "url(" + tree.toDataURL('image/png') + ")");
+            canvas.css("background", "#ffe");
+            $await(Jscex.Async.sleep(300));
+            canvas.css("background", "none");
+        }));
+
+        var jumpAnimate = eval(Jscex.compile("async", function () {
+            var ctx = tree.ctx;
+            while (true) {
+                tree.ctx.clearRect(0, 0, width, height);
+                tree.jump();
+                foot.draw();
+                $await(Jscex.Async.sleep(25));
+            }
+        }));
+
+        var textAnimate = eval(Jscex.compile("async", function () {
+        var together = new Date();
+        together.setFullYear(2025,5,15 );      //时间年月日
+        together.setHours(00);            //小时  
+        together.setMinutes(33);          //分钟
+        together.setSeconds(0);         //秒前一位
+        together.setMilliseconds(2);        //秒第二位
+
+        $("#code").show().typewriter();
+            $("#clock-box").fadeIn(500);
+            while (true) {
+                timeElapse(together);
+                $await(Jscex.Async.sleep(1000));
+            }
+        }));
+
+        var runAsync = eval(Jscex.compile("async", function () {
+            $await(seedAnimate());
+            $await(growAnimate());
+            $await(flowAnimate());
+            $await(moveAnimate());
+
+            textAnimate().start();
+
+            $await(jumpAnimate());
+        }));
+
+        runAsync().start();
+    })();
+    </script>
+
+    </body></html>
